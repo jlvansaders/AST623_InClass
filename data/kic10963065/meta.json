@@ -1,0 +1,39 @@
+{
+  "target": "KIC 10963065",
+  "mission": "Kepler",
+  "cadence_s": 58.848,
+  "n_lc": 1121878,
+  "t0_bkjd": 231.3831535089921,
+  "span_days": 1359.629,
+  "nyquist_uHz": 8496.5,
+  "resolution_uHz": 0.00851,
+  "psd": {
+    "f0": 5.0,
+    "df": 0.008512673913042335,
+    "n": 997513,
+    "units": "ppm^2/uHz"
+  },
+  "flatten_days": 1.0,
+  "quarters": [
+    2,
+    5,
+    6,
+    7,
+    10,
+    11,
+    13,
+    14,
+    15,
+    17
+  ],
+  "spectroscopy": {
+    "teff_K": [
+      6104,
+      74
+    ],
+    "feh_dex": [
+      -0.2,
+      0.1
+    ]
+  }
+}

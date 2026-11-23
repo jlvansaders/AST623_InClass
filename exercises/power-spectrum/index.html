@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Examining the Power Spectrum</title>
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261123j">
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+</head>
+<body>
+  <header class="site"><div class="inner">
+    <a class="home-btn" href="../../">← Home</a>
+    <span class="crumb">Examining the Power Spectrum</span>
+  </div></header>
+
+  <main>
+    <h1>Examining the Power Spectrum</h1>
+
+    <section class="picker" aria-label="Pick your target">
+      <h2>Pick your target</h2>
+      <div class="targets" id="targets"></div>
+    </section>
+    <p class="lede">Each target is a bright, Sun-like star that Kepler observed at one-minute cadence for months to years. Surface convection drives acoustic (p-mode) oscillations in these stars. You will find them, then measure their characteristic frequencies.</p>
+
+    <p class="muted">How to use the plots: <b>hover</b> to read values and <b>drag</b> a box to zoom. Use the <b>Zoom | Pan</b> toggle above each plot to switch between zooming and sliding the view, and <b>Reset view</b> (or double-click) to zoom back out. The data files are about 13&nbsp;MB, so give them a moment to load.</p>
+
+    <div class="facts" id="facts"></div>
+
+    <!-- Light curve -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 style="margin:0">1 · Light curve</h2>
+          <p>Brightness versus time, after removing slow trends longer than about a day.</p>
+        </div>
+      </div>
+      <div id="lc" class="plot"><div class="loading">Loading light curve…</div></div>
+    </section>
+
+    <!-- Power spectrum -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 style="margin:0">2 · Power spectrum</h2>
+          <p>Power spectral density of the light curve, up to the Nyquist frequency. The corner label gives the display's effective smoothing at your current zoom.</p>
+        </div>
+      </div>
+      <div class="controls">
+        <span>Axes</span>
+        <span class="seg" id="axes">
+          <button data-mode="loglog" aria-pressed="true">log–log</button>
+          <button data-mode="linear" aria-pressed="false">linear</button>
+        </span>
+        <label>Smoothing width <input type="number" id="smooth" value="0" min="0" step="any"> µHz</label>
+        <button id="apply-smooth">Apply</button>
+        <label><input type="checkbox" id="show-raw" checked> Show unsmoothed spectrum</label>
+      </div>
+      <div id="psd" class="plot tall"><div class="loading">Loading power spectrum…</div></div>
+      <div class="controls" style="margin-top:8px">
+        <span class="seg" id="sep-mode">
+          <button data-mode="large" aria-pressed="true" title="Each pin compared with the previous one">Large frequency separation</button>
+          <button data-mode="small" aria-pressed="false" title="Pins paired 1–2, 3–4, …; separation within each pair">Small frequency separation</button>
+          <button data-mode="lseries" aria-pressed="false" title="Pin the modes of one degree; they are also marked on the échelle diagram">Mark l series</button>
+        </span>
+      </div>
+      <div class="pins" id="pins"></div>
+    </section>
+
+    <!-- ACF -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 style="margin:0">3 · Autocorrelation of the power spectrum</h2>
+          <p>How similar the power spectrum is to a copy of itself shifted by some frequency lag. Regularly spaced peaks produce peaks in the autocorrelation at their spacing.</p>
+        </div>
+      </div>
+      <div class="controls">
+        <label>From <input type="number" id="acf-lo" value="500" step="any"> µHz</label>
+        <label>to <input type="number" id="acf-hi" value="5000" step="any"> µHz</label>
+        <label>Max lag <input type="number" id="acf-lag" value="250" min="1" step="any"> µHz</label>
+        <button id="acf-go">Compute</button>
+        <button id="acf-view">Use power-spectrum zoom range</button>
+      </div>
+      <div id="acf" class="plot"><div class="loading">Waiting for data…</div></div>
+      <div class="pins" id="acf-pins"></div>
+    </section>
+
+    <!-- Échelle diagram -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 style="margin:0">4 · Échelle diagram</h2>
+          <p>The power spectrum cut into slices Δν wide and stacked, lowest frequency at the bottom. With the right Δν, modes of the same degree line up in near-vertical ridges.</p>
+        </div>
+      </div>
+      <div class="controls">
+        <label>Δν <input type="range" id="ech-slider" min="50" max="200" step="0.01" value="100" style="width:min(320px,60vw)"></label>
+        <label><input type="number" id="ech-dnu" value="100" min="1" step="0.05"> µHz</label>
+        <label title="Phase offset ε: shifts the x axis to (ν − εΔν) mod Δν, so with the right ε the l=0 ridge sits at 0">ε <input type="number" id="ech-eps" value="0" step="0.01"></label>
+      </div>
+      <div class="controls">
+        <label>From <input type="number" id="ech-lo" value="1000" step="any"> µHz</label>
+        <label>to <input type="number" id="ech-hi" value="3500" step="any"> µHz</label>
+        <label>Bin width <input type="number" id="ech-bin" value="0.5" min="0.01" step="any"> µHz</label>
+        <label><input type="checkbox" id="ech-rep"> Show two Δν widths</label>
+      </div>
+      <div id="echelle" class="plot tall"><div class="loading">Waiting for data…</div></div>
+    </section>
+
+    <section class="panel" id="scaling">
+      <div class="panel-head">
+        <div>
+          <h2 style="margin:0">5 · Mass, radius and age from scaling relations</h2>
+          <p>Turn your measurements into stellar properties with the scaling relations of <a href="https://earlbellinger.com/papers/scaling-age.pdf" target="_blank" rel="noopener">Bellinger (2019, MNRAS 486, 4612)</a>.</p>
+        </div>
+      </div>
+
+      <h3>The classical relations</h3>
+      <p class="eq-note">Δν measures the star's mean density (Δν ∝ √(M/R³)) and ν<sub>max</sub> tracks the acoustic cut-off frequency (ν<sub>max</sub> ∝ g/√T<sub>eff</sub> ∝ M R<sup>−2</sup> T<sub>eff</sub><sup>−1/2</sup>). Solving those two proportionalities for M and R, relative to the Sun, gives:</p>
+      <div class="eq" data-tex="\frac{M}{M_\odot} \simeq \left(\frac{\nu_\mathrm{max}}{\nu_{\mathrm{max},\odot}}\right)^{3}\left(\frac{\Delta\nu}{\Delta\nu_\odot}\right)^{-4}\left(\frac{T_\mathrm{eff}}{T_{\mathrm{eff},\odot}}\right)^{3/2}"><code>\frac{M}{M_\odot} \simeq \left(\frac{\nu_\mathrm{max}}{\nu_{\mathrm{max},\odot}}\right)^{3}\left(\frac{\Delta\nu}{\Delta\nu_\odot}\right)^{-4}\left(\frac{T_\mathrm{eff}}{T_{\mathrm{eff},\odot}}\right)^{3/2}</code></div>
+      <div class="eq" data-tex="\frac{R}{R_\odot} \simeq \left(\frac{\nu_\mathrm{max}}{\nu_{\mathrm{max},\odot}}\right)^{1}\left(\frac{\Delta\nu}{\Delta\nu_\odot}\right)^{-2}\left(\frac{T_\mathrm{eff}}{T_{\mathrm{eff},\odot}}\right)^{1/2}"><code>\frac{R}{R_\odot} \simeq \left(\frac{\nu_\mathrm{max}}{\nu_{\mathrm{max},\odot}}\right)^{1}\left(\frac{\Delta\nu}{\Delta\nu_\odot}\right)^{-2}\left(\frac{T_\mathrm{eff}}{T_{\mathrm{eff},\odot}}\right)^{1/2}</code></div>
+
+      <h3>Bellinger's calibrated relations</h3>
+      <p class="eq-note">Bellinger keeps the same power-law form but lets the exponents float, and adds two more inputs: the small separation δν<sub>02</sub>, which is sensitive to the hydrogen left in the core (and so to age), and the metallicity. The exponents were fitted (by MCMC) to 80 Kepler main-sequence and early-subgiant stars whose masses, radii and ages had been found by fitting stellar models. Every relation has the form</p>
+      <div class="eq" data-tex="\frac{Y}{Y_\odot} = \left(\frac{\nu_\mathrm{max}}{\nu_{\mathrm{max},\odot}}\right)^{\alpha}\left(\frac{\Delta\nu}{\Delta\nu_\odot}\right)^{\beta}\left(\frac{\delta\nu_{02}}{\delta\nu_{02,\odot}}\right)^{\gamma}\left(\frac{T_\mathrm{eff}}{T_{\mathrm{eff},\odot}}\right)^{\delta}\left(\frac{e^{[\mathrm{Fe/H}]}}{e^{[\mathrm{Fe/H}]_\odot}}\right)^{\varepsilon}"><code>\frac{Y}{Y_\odot} = \left(\frac{\nu_\mathrm{max}}{\nu_{\mathrm{max},\odot}}\right)^{\alpha}\left(\frac{\Delta\nu}{\Delta\nu_\odot}\right)^{\beta}\left(\frac{\delta\nu_{02}}{\delta\nu_{02,\odot}}\right)^{\gamma}\left(\frac{T_\mathrm{eff}}{T_{\mathrm{eff},\odot}}\right)^{\delta}\left(\frac{e^{[\mathrm{Fe/H}]}}{e^{[\mathrm{Fe/H}]_\odot}}\right)^{\varepsilon}</code></div>
+      <p class="eq-note">where Y is the star's mass, radius or age (Y<sub>⊙</sub> = 1&nbsp;M<sub>⊙</sub>, 1&nbsp;R<sub>⊙</sub> or 4.569&nbsp;Gyr), and α, β, γ, δ and ε are exponents fitted separately for each of the three.</p>
+      <p class="eq-note">Solar reference values: ν<sub>max,⊙</sub> = 3090 ± 30 µHz, Δν<sub>⊙</sub> = 135.1 ± 0.1 µHz, δν<sub>02,⊙</sub> = 8.957 ± 0.059 µHz, T<sub>eff,⊙</sub> = 5772 ± 0.8 K, [Fe/H]<sub>⊙</sub> = 0. The relations were calibrated on stars with Δν between 38 and 180 µHz and δν<sub>02</sub> between 2.8 and 13 µHz. Outside that range (red giants especially) they are extrapolations.</p>
+
+      <h3>Your star</h3>
+      <div class="sr-inputs">
+        <fieldset>
+          <legend>From the power spectrum</legend>
+          <div class="sr-row"><label for="sr-numax">ν<sub>max</sub></label><input type="number" id="sr-numax" step="any" inputmode="decimal"><span>±</span><input type="number" id="sr-numax-err" step="any" min="0" inputmode="decimal" aria-label="ν<sub>max</sub> uncertainty"><span class="unit">µHz</span></div>
+          <div class="sr-row"><label for="sr-dnu">Δν</label><input type="number" id="sr-dnu" step="any" inputmode="decimal"><span>±</span><input type="number" id="sr-dnu-err" step="any" min="0" inputmode="decimal" aria-label="Δν uncertainty"><span class="unit">µHz</span></div>
+          <div class="sr-row"><label for="sr-sdnu">δν<sub>02</sub></label><input type="number" id="sr-sdnu" step="any" inputmode="decimal"><span>±</span><input type="number" id="sr-sdnu-err" step="any" min="0" inputmode="decimal" aria-label="δν<sub>02</sub> uncertainty"><span class="unit">µHz</span></div>
+        </fieldset>
+        <fieldset>
+          <legend>From spectroscopy</legend>
+          <div class="sr-row"><label for="sr-teff">T<sub>eff</sub></label><input type="number" id="sr-teff" step="any" inputmode="decimal"><span>±</span><input type="number" id="sr-teff-err" step="any" min="0" inputmode="decimal" aria-label="T<sub>eff</sub> uncertainty"><span class="unit">K</span></div>
+          <div class="sr-row"><label for="sr-feh">[Fe/H]</label><input type="number" id="sr-feh" step="any" inputmode="decimal"><span>±</span><input type="number" id="sr-feh-err" step="any" min="0" inputmode="decimal" aria-label="[Fe/H] uncertainty"><span class="unit">dex</span></div>
+        </fieldset>
+      </div>
+      <div class="controls">
+        <button id="sr-clear">Clear</button>
+      </div>
+      <div class="sr-wrap"><table class="sr-table sr-out" id="sr-out"></table></div>
+      <p class="sr-warn" id="sr-warn"></p>
+    </section>
+
+  </main>
+
+  <script type="module">
+    import { targetPicker, loadDataset, lightCurvePlot, powerSpectrumPlot, psdAutocorrelation, acfPlot,
+             echelleGrid, echellePlot } from '../../assets/js/asteroplot.js?v=20261123j';
+
+    const $ = id => document.getElementById(id);
+
+      // Equations: LaTeX in data-tex, typeset with KaTeX (falls back to the raw LaTeX).
+      document.querySelectorAll('.eq[data-tex]').forEach(el => {
+        try { katex.render(el.dataset.tex, el, { displayMode: true, throwOnError: false }); } catch (e) { /* keep the LaTeX source */ }
+      });
+
+      // ---- Scaling relations (Bellinger 2019, Eq. 5 and Table 1) ----
+      // Exponents [α, β, γ, δ, ε] on νmax, Δν, δν02, Teff, exp[Fe/H].
+      const SUN = { numax: [3090, 30], dnu: [135.1, 0.1], sdnu: [8.957, 0.059], teff: [5772, 0.8] };
+      const RELATIONS = [
+        { name: 'Mass',   unit: 'M☉', P: [0.97531880, -1.43472745, 0, 1.21647950, 0.27014278] },
+        { name: 'Radius', unit: 'R☉', P: [0.30490057, -1.12949647, 0, 0.31236570, 0.10024562] },
+        { name: 'Age',    unit: 'Gyr', P: [-6.55598425, 9.05883854, -1.29229053, -4.24528340, -0.42594767], scale: [4.569, 0.006] },
+      ];
+      const SR_IDS = ['numax', 'dnu', 'sdnu', 'teff', 'feh'];
+      const SR_SYM = ['νmax', 'Δν', 'δν02', 'Teff', '[Fe/H]'];
+      const num = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : null; };
+      // Boxes holding something that isn't a number (e.g. "6,104"): the browser reports value ''.
+      const unreadable = () => SR_IDS.flatMap((id, i) =>
+        ['sr-' + id, 'sr-' + id + '-err'].filter(b => $(b).validity.badInput).map(b => SR_SYM[i] + (b.endsWith('-err') ? ' uncertainty' : '')));
+      const fmtSig = (v, e) => {
+        // Value to the precision of its uncertainty (2 significant figures on the error).
+        if (!(e > 0)) return v.toPrecision(4);
+        const d = Math.max(0, 1 - Math.floor(Math.log10(e)));
+        return `${v.toFixed(d)} ± ${e.toFixed(d)}`;
+      };
+      const runScaling = () => {
+        const val = {}, err = {};
+        for (const id of SR_IDS) { val[id] = num('sr-' + id); err[id] = Math.abs(num('sr-' + id + '-err') ?? 0); }
+        // Ratios to the Sun and their fractional errors (inputs and solar values both count).
+        const ratio = [], frac = [];
+        SR_IDS.forEach((id, i) => {
+          if (id === 'feh') {
+            ratio[i] = val.feh == null ? null : Math.exp(val.feh);
+            frac[i] = err.feh;                     // σ(e^x)/e^x = σx
+          } else {
+            const [s, se] = SUN[id];
+            ratio[i] = val[id] == null ? null : val[id] / s;
+            frac[i] = val[id] ? Math.hypot(err[id] / val[id], se / s) : 0;
+          }
+        });
+        const rows = RELATIONS.map(r => {
+          const need = r.P.map((p, i) => p !== 0 ? i : -1).filter(i => i >= 0);
+          const missing = need.filter(i => ratio[i] == null || ratio[i] <= 0);
+          if (missing.length) {
+            return `<tr><td class="name">${r.name}</td><td class="arith">enter ${missing.map(i => SR_SYM[i]).join(', ')}</td></tr>`;
+          }
+          let y = 1, f2 = 0;
+          for (const i of need) { y *= Math.pow(ratio[i], r.P[i]); f2 += (r.P[i] * frac[i]) ** 2; }
+          if (r.scale) { f2 += (r.scale[1] / r.scale[0]) ** 2; y *= r.scale[0]; }
+          const e = y * Math.sqrt(f2);
+          return `<tr><td class="name">${r.name}</td><td>${fmtSig(y, e)} ${r.unit}</td></tr>`;
+        });
+        $('sr-out').innerHTML = `<thead><tr><th class="name">Quantity</th><th>Value</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+        const warn = [];
+        if (val.dnu != null && (val.dnu < 38 || val.dnu > 180)) warn.push(`Δν = ${val.dnu} µHz is outside the calibration range (38–180 µHz).`);
+        if (val.sdnu != null && (val.sdnu < 2.8 || val.sdnu > 13)) warn.push(`δν02 = ${val.sdnu} µHz is outside the calibration range (2.8–13 µHz).`);
+        const bad = unreadable();
+        $('sr-warn').textContent = [
+          bad.length ? `⚠ Can't read ${bad.join(', ')} as a number (use digits and a decimal point, e.g. 6104 or -0.2).` : '',
+          warn.length ? '⚠ ' + warn.join(' ') + ' Treat the result as an extrapolation.' : '',
+        ].filter(Boolean).join(' ');
+      };
+      SR_IDS.forEach(id => ['sr-' + id, 'sr-' + id + '-err'].forEach(b => {
+        $(b).addEventListener('input', runScaling);
+        $(b).addEventListener('change', runScaling);
+      }));
+      $('sr-clear').onclick = () => { SR_IDS.forEach(id => { $('sr-' + id).value = ''; $('sr-' + id + '-err').value = ''; }); runScaling(); };
+      runScaling();
+
+    try {
+      const target = await targetPicker($('targets'));
+      // Per-star starting range for the échelle (data/targets.json), around the oscillation hump.
+      if (target.echelle) { $('ech-lo').value = target.echelle[0]; $('ech-hi').value = target.echelle[1]; }
+      // Pre-fill the star's spectroscopic Teff and [Fe/H] in the scaling panel. Read
+      // from meta.json (tiny) before the large data files, and never over a box the
+      // user has already typed in.
+      const spec = await fetch(`../../data/${target.slug}/meta.json`).then(r => r.json()).then(j => j.spectroscopy).catch(() => null);
+      if (spec) {
+        [['teff', spec.teff_K], ['feh', spec.feh_dex]].forEach(([id, v]) => {
+          if (!v) return;
+          if ($('sr-' + id).value === '' && !$('sr-' + id).validity.badInput) $('sr-' + id).value = v[0];
+          if ($('sr-' + id + '-err').value === '' && !$('sr-' + id + '-err').validity.badInput) $('sr-' + id + '-err').value = v[1];
+        });
+        runScaling();
+      } else {
+        console.warn(`meta.json for ${target.slug} has no "spectroscopy" block (Teff, [Fe/H]).`);
+      }
+      const data = await loadDataset(`../../data/${target.slug}/`);
+      const m = data.meta;
+      $('facts').innerHTML = [
+        ['Target', m.target],
+        ['Cadence', `${m.cadence_s.toFixed(1)} s`],
+        ['Time span', `${m.span_days.toFixed(0)} d`],
+        ['Points', m.n_lc.toLocaleString()],
+        ['Nyquist', `${m.nyquist_uHz.toFixed(0)} µHz`],
+        ['Resolution', `${m.resolution_uHz.toFixed(4)} µHz`],
+      ].map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join('');
+
+      lightCurvePlot($('lc'), data);
+
+      // Pin table. Normal mode: each pin vs the previous one (Δν). "Small frequency
+      // separation" mode: pins are paired in frequency order (1–2, 3–4, …) and only
+      // the separation within each pair is reported (δν), not the gap between pairs.
+      // "Mark l series" mode: each pin is listed with ν mod Δν and also drawn on the
+      // échelle diagram, so a series of modes of one degree can be traced as a ridge.
+      let lastPins = [], mode = 'large', ech = null;
+      const smallSepOn = () => mode === 'small';
+      const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+      const showPins = pins => {
+        lastPins = pins;
+        ech?.setMarks(mode === 'lseries' ? pins : []);
+        if (!pins.length) {
+          $('pins').innerHTML = `<span class="empty">${{
+            small: 'Click the two peaks of a close pair (e.g. l=2 then l=0); each two pins form one pair.',
+            lseries: 'Click the peaks of one degree (e.g. every l=0 mode); they are also marked on the échelle diagram below.',
+          }[mode] ?? 'Click a peak to pin its frequency.'}</span>`;
+          return;
+        }
+        let table, summary = '';
+        if (mode === 'lseries') {
+          const dnu = parseFloat($('ech-dnu').value), eps = parseFloat($('ech-eps').value) || 0;
+          const off = eps * dnu, xName = eps ? '(ν − εΔν) mod Δν' : 'ν mod Δν';
+          const rows = pins.map((f, i) =>
+            `<tr><td>${i + 1}</td><td>${f.toFixed(2)}</td><td>${dnu > 0 ? (f - off - Math.floor((f - off) / dnu) * dnu).toFixed(2) : '—'}</td><td>${i ? (f - pins[i - 1]).toFixed(2) : '—'}</td></tr>`
+          ).join('');
+          table = `<table><thead><tr><th>#</th><th>ν (µHz)</th><th>${xName}</th><th>Δ from previous</th></tr></thead><tbody>${rows}</tbody></table>`;
+          summary = `<p style="margin:6px 0">${xName} uses the échelle's Δν = <b class="mono">${dnu} µHz</b>${eps ? ` and ε = <b class="mono">${eps}</b>` : ''}.</p>`;
+        } else if (smallSepOn()) {
+          const rows = [], seps = [];
+          for (let i = 0; i < pins.length; i += 2) {
+            const a = pins[i], b = pins[i + 1];
+            if (b !== undefined) seps.push(b - a);
+            rows.push(`<tr><td>${i / 2 + 1}</td><td>${a.toFixed(2)}</td><td>${b !== undefined ? b.toFixed(2) : '<span class="empty">click its partner</span>'}</td><td>${b !== undefined ? (b - a).toFixed(2) : '—'}</td></tr>`);
+          }
+          table = `<table><thead><tr><th>Pair</th><th>ν₁ (µHz)</th><th>ν₂ (µHz)</th><th>δν = ν₂ − ν₁</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+          if (seps.length) summary = `<p style="margin:6px 0">Average δν: <b class="mono">${mean(seps).toFixed(2)} µHz</b> (${seps.length} pair${seps.length > 1 ? 's' : ''})</p>`;
+        } else {
+          const rows = pins.map((f, i) =>
+            `<tr><td>${i + 1}</td><td>${f.toFixed(2)}</td><td>${i ? (f - pins[i - 1]).toFixed(2) : '—'}</td></tr>`
+          ).join('');
+          table = `<table><thead><tr><th>#</th><th>ν (µHz)</th><th>Δ from previous</th></tr></thead><tbody>${rows}</tbody></table>`;
+          if (pins.length > 1) summary = `<p style="margin:6px 0">Average Δ: <b class="mono">${((pins[pins.length - 1] - pins[0]) / (pins.length - 1)).toFixed(2)} µHz</b> (${pins.length - 1} interval${pins.length > 2 ? 's' : ''})</p>`;
+        }
+        $('pins').innerHTML = `${table}${summary}<p style="margin:6px 0"><button id="clear-pins">Clear pins</button></p>`;
+        $('clear-pins').onclick = () => psd.clearPins();
+      };
+      document.querySelectorAll('#sep-mode button').forEach(b => b.onclick = () => {
+        document.querySelectorAll('#sep-mode button').forEach(x => x.setAttribute('aria-pressed', x === b));
+        mode = b.dataset.mode;
+        showPins(lastPins);
+      });
+      const psd = powerSpectrumPlot($('psd'), data, { onPins: showPins });
+      showPins([]);
+
+      document.querySelectorAll('#axes button').forEach(b => b.onclick = () => {
+        document.querySelectorAll('#axes button').forEach(x => x.setAttribute('aria-pressed', x === b));
+        const log = b.dataset.mode === 'loglog';
+        psd.setLog(log, log);
+      });
+      $('apply-smooth').onclick = () => psd.setSmoothing(parseFloat($('smooth').value) || 0);
+      $('smooth').onkeydown = e => { if (e.key === 'Enter') $('apply-smooth').click(); };
+      $('show-raw').onchange = e => psd.setShowRaw(e.target.checked);
+
+      // Click to pin lags; the table lists each lag and its difference from the previous one.
+      const showAcfPins = pins => {
+        if (!pins.length) {
+          $('acf-pins').innerHTML = '<span class="empty">Click a peak to pin its lag.</span>';
+          return;
+        }
+        const rows = pins.map((x, i) =>
+          `<tr><td>${i + 1}</td><td>${x.toFixed(2)}</td><td>${i ? (x - pins[i - 1]).toFixed(2) : '—'}</td></tr>`
+        ).join('');
+        $('acf-pins').innerHTML =
+          `<table><thead><tr><th>#</th><th>Lag (µHz)</th><th>Δ from previous</th></tr></thead><tbody>${rows}</tbody></table>
+           <p style="margin:6px 0"><button id="acf-clear">Clear pins</button></p>`;
+        $('acf-clear').onclick = () => acf.clearPins();
+      };
+      const acf = acfPlot($('acf'), { onPins: showAcfPins });
+      showAcfPins([]);
+      const runAcf = () => {
+        const lo = parseFloat($('acf-lo').value), hi = parseFloat($('acf-hi').value);
+        const lag = parseFloat($('acf-lag').value);
+        acf.show(psdAutocorrelation(data, Math.min(lo, hi), Math.max(lo, hi), lag));
+      };
+      $('acf-go').onclick = runAcf;
+      ['acf-lo', 'acf-hi', 'acf-lag'].forEach(id => $(id).onkeydown = e => { if (e.key === 'Enter') runAcf(); });
+      $('acf-view').onclick = () => {
+        const [a, b] = psd.viewRange();
+        $('acf-lo').value = a.toFixed(0); $('acf-hi').value = b.toFixed(0);
+        runAcf();
+      };
+      runAcf();
+
+      // Échelle diagram: redraws live as the slider moves.
+      ech = echellePlot($('echelle'));
+      const runEchelle = () => {
+        const dnu = parseFloat($('ech-dnu').value);
+        const lo = parseFloat($('ech-lo').value), hi = parseFloat($('ech-hi').value);
+        const bin = parseFloat($('ech-bin').value);
+        if (!(dnu > 0 && bin > 0 && hi > lo)) return;
+        const eps = parseFloat($('ech-eps').value) || 0;
+        ech.show(echelleGrid(data, dnu, lo, hi, bin, $('ech-rep').checked, eps), dnu);
+        if (mode === 'lseries') showPins(lastPins);   // refresh the ν mod Δν column
+      };
+      let pending = false;
+      const scheduleEchelle = () => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(() => { pending = false; runEchelle(); });
+      };
+      $('ech-slider').oninput = () => { $('ech-dnu').value = $('ech-slider').value; scheduleEchelle(); };
+      $('ech-dnu').oninput = () => {
+        const v = parseFloat($('ech-dnu').value);
+        if (v > 0) {
+          $('ech-slider').min = Math.min(50, Math.floor(v * 0.5));
+          $('ech-slider').max = Math.max(200, Math.ceil(v * 1.5));
+          $('ech-slider').value = v;
+        }
+        scheduleEchelle();
+      };
+      ['ech-lo', 'ech-hi', 'ech-bin'].forEach(id => $(id).onchange = scheduleEchelle);
+      $('ech-rep').onchange = scheduleEchelle;
+      $('ech-eps').oninput = scheduleEchelle;
+      runEchelle();
+    } catch (err) {
+      document.querySelectorAll('.loading').forEach(el => el.textContent = 'Could not load data: ' + err.message);
+      console.error(err);
+    }
+  </script>
+</body>
+</html>

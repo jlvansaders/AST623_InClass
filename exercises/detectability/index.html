@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Understanding Detectability</title>
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261123j">
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+</head>
+<body>
+  <header class="site"><div class="inner">
+    <a class="home-btn" href="../../">← Home</a>
+    <span class="crumb">Understanding Detectability</span>
+  </div></header>
+
+  <main>
+    <h1>Understanding Detectability</h1>
+
+    <section class="picker" aria-label="Pick your target">
+      <h2>Pick your target</h2>
+      <div class="targets" id="targets"></div>
+    </section>
+    <p class="lede">The same Kepler data as in Examining the Power Spectrum, but now you control how good the observations are. Shorten the time series, observe less often, or add noise, and watch what happens to your ability to detect the oscillations and measure ν<sub>max</sub>, Δν and δν<sub>02</sub>.</p>
+
+    <p class="muted">The controls below stay at the top of the screen as you scroll. Each change re-processes the light curve and recomputes the power spectrum in your browser. Hover to read values, drag to zoom, and use <b>Reset view</b> to zoom back out.</p>
+
+    <!-- Degradation controls -->
+    <section class="knobs" aria-label="Observation settings">
+      <div class="knob">
+        <label for="k-days">Time span</label>
+        <div class="row"><input type="range" id="k-days" min="0" max="10" step="1" value="10"><span class="val" id="v-days"></span></div>
+      </div>
+      <div class="knob">
+        <label for="k-cad">Cadence</label>
+        <div class="row"><input type="range" id="k-cad" min="0" max="5" step="1" value="0"><span class="val" id="v-cad"></span></div>
+      </div>
+      <div class="knob">
+        <label for="k-noise">Added noise (per 1-min point)</label>
+        <div class="row"><input type="range" id="k-noise" min="0" max="11" step="1" value="0"><span class="val" id="v-noise"></span></div>
+      </div>
+      <div class="knob-foot">
+        <button id="k-reset">Back to original data</button>
+        <span id="k-status">Loading data…</span>
+      </div>
+    </section>
+
+    <div class="facts" id="facts"></div>
+
+    <!-- Power spectrum -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 style="margin:0">1 · Power spectrum</h2>
+          <p>Power spectral density, from the frequency resolution up to the Nyquist frequency. The corner label gives the display's effective smoothing at your current zoom. Pins stay put when you change the settings above, so you can mark modes in the original data and then watch them fade.</p>
+        </div>
+      </div>
+      <div class="controls">
+        <span>Axes</span>
+        <span class="seg" id="axes">
+          <button data-mode="loglog" aria-pressed="true">log–log</button>
+          <button data-mode="linear" aria-pressed="false">linear</button>
+        </span>
+        <label>Smoothing width <input type="number" id="smooth" value="0" min="0" step="any"> µHz</label>
+        <button id="apply-smooth">Apply</button>
+        <label><input type="checkbox" id="show-raw" checked> Show unsmoothed spectrum</label>
+      </div>
+      <div id="psd" class="plot tall"><div class="loading">Loading power spectrum…</div></div>
+      <div class="pins" id="pins"></div>
+    </section>
+
+    <!-- Light curve -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 style="margin:0">2 · Light curve</h2>
+          <p>The light curve after your changes. Shortened time spans are cut from the longest stretch of data without gaps; “full” uses everything, gaps and all.</p>
+        </div>
+      </div>
+      <div id="lc" class="plot"><div class="loading">Loading light curve…</div></div>
+    </section>
+
+    <!-- ACF -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 style="margin:0">3 · Autocorrelation of the power spectrum</h2>
+          <p>Recomputed automatically over the range below whenever the data change.</p>
+        </div>
+      </div>
+      <div class="controls">
+        <label>From <input type="number" id="acf-lo" value="1500" step="any"> µHz</label>
+        <label>to <input type="number" id="acf-hi" value="3000" step="any"> µHz</label>
+        <label>Max lag <input type="number" id="acf-lag" value="250" min="1" step="any"> µHz</label>
+        <button id="acf-go">Compute</button>
+        <button id="acf-view">Use power-spectrum zoom range</button>
+      </div>
+      <div id="acf" class="plot"><div class="loading">Waiting for data…</div></div>
+      <div class="pins" id="acf-pins"></div>
+    </section>
+
+  </main>
+
+  <script type="module">
+    import { targetPicker, loadDataset, lightCurvePlot, powerSpectrumPlot, psdAutocorrelation, acfPlot }
+      from '../../assets/js/asteroplot.js?v=20261123j';
+    import { degrade, standardNormals, longestSegment } from '../../assets/js/degrade.js?v=20261123j';
+
+    const $ = id => document.getElementById(id);
+
+    // Slider stops. Shortened spans are cut from the longest gap-free stretch of
+    // data (about 276 days), so every stop short of "full" is uninterrupted.
+    // Cadence is a whole number of native ~58.85 s cadences; 30 of them is
+    // Kepler's long cadence.
+    const DAYS = [1, 2, 5, 10, 20, 30, 60, 90, 180, 270, Infinity];
+    const BINS = [1, 2, 5, 10, 30, 60];
+    const NOISE = [0, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000];
+
+    let native, normals, current, segStart = 0;
+    const psdOpts = { log: true, smoothing: 0, showRaw: true, pins: [] };
+    let psd;
+    // Click to pin lags; the table lists each lag and its difference from the previous one.
+    // Pins stay put when the settings change, like the power-spectrum pins.
+    const showAcfPins = pins => {
+      if (!pins.length) {
+        $('acf-pins').innerHTML = '<span class="empty">Click a peak to pin its lag.</span>';
+        return;
+      }
+      const rows = pins.map((x, i) =>
+        `<tr><td>${i + 1}</td><td>${x.toFixed(2)}</td><td>${i ? (x - pins[i - 1]).toFixed(2) : '—'}</td></tr>`
+      ).join('');
+      $('acf-pins').innerHTML =
+        `<table><thead><tr><th>#</th><th>Lag (µHz)</th><th>Δ from previous</th></tr></thead><tbody>${rows}</tbody></table>
+         <p style="margin:6px 0"><button id="acf-clear">Clear pins</button></p>`;
+      $('acf-clear').onclick = () => acf.clearPins();
+    };
+    const acf = acfPlot($('acf'), { onPins: showAcfPins });
+    showAcfPins([]);
+
+    const settings = () => ({
+      start: segStart, days: DAYS[+$('k-days').value], binN: BINS[+$('k-cad').value], noisePpm: NOISE[+$('k-noise').value],
+    });
+    const showKnobValues = () => {
+      const s = settings();
+      $('v-days').textContent = Number.isFinite(s.days) ? `${s.days} d` : `full (${native ? native.meta.span_days.toFixed(0) : '…'} d)`;
+      const c = s.binN * (native ? native.meta.cadence_s : 58.85);
+      $('v-cad').textContent = c < 120 ? `${c.toFixed(0)} s` : `${(c / 60).toFixed(1)} min`;
+      $('v-noise').textContent = `${s.noisePpm} ppm`;
+    };
+
+    const showPins = pins => {
+      psdOpts.pins = pins;
+      if (!pins.length) { $('pins').innerHTML = '<span class="empty">Click a peak to pin its frequency.</span>'; return; }
+      const rows = pins.map((f, i) =>
+        `<tr><td>${i + 1}</td><td>${f.toFixed(2)}</td><td>${i ? (f - pins[i - 1]).toFixed(2) : '—'}</td></tr>`).join('');
+      const avg = pins.length > 1
+        ? `<p style="margin:6px 0">Average Δ: <b class="mono">${((pins[pins.length - 1] - pins[0]) / (pins.length - 1)).toFixed(2)} µHz</b> (${pins.length - 1} interval${pins.length > 2 ? 's' : ''})</p>`
+        : '';
+      $('pins').innerHTML =
+        `<table><thead><tr><th>#</th><th>ν (µHz)</th><th>Δ from previous</th></tr></thead><tbody>${rows}</tbody></table>
+         ${avg}<p style="margin:6px 0"><button id="clear-pins">Clear pins</button></p>`;
+      $('clear-pins').onclick = () => psd.clearPins();
+    };
+
+    const runAcf = () => {
+      if (!current) return;
+      const lo = parseFloat($('acf-lo').value), hi = parseFloat($('acf-hi').value), lag = parseFloat($('acf-lag').value);
+      acf.show(psdAutocorrelation(current, Math.min(lo, hi), Math.max(lo, hi), lag));
+    };
+
+    const render = () => {
+      const s = settings();
+      const t0 = performance.now();
+      current = degrade(native, normals, s);
+      const ms = performance.now() - t0;
+      const m = current.meta;
+      $('facts').innerHTML = [
+        ['Time span', `${m.span_days.toFixed(m.span_days < 10 ? 2 : 0)} d`],
+        ['Cadence', m.cadence_s < 120 ? `${m.cadence_s.toFixed(1)} s` : `${(m.cadence_s / 60).toFixed(1)} min`],
+        ['Points', m.n_lc.toLocaleString()],
+        ['Scatter', `${m.rms_ppm.toFixed(0)} ppm`],
+        ['Nyquist', `${m.nyquist_uHz.toFixed(0)} µHz`],
+        ['Resolution', `${m.resolution_uHz < 0.1 ? m.resolution_uHz.toFixed(4) : m.resolution_uHz.toFixed(2)} µHz`],
+      ].map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join('');
+      lightCurvePlot($('lc'), current);
+      // Keep the power spectrum's zoom (and log/linear state, in psdOpts) across rebuilds.
+      const view = psd?.getView() ?? null;
+      psd = powerSpectrumPlot($('psd'), current, { ...psdOpts, view, onPins: showPins });
+      runAcf();
+      $('k-status').textContent = `Recomputed in ${Math.round(ms)} ms.`;
+    };
+
+    // Recompute once the slider settles; the short delay also lets the
+    // "Computing…" text paint first. (A plain timer, not requestAnimationFrame,
+    // which browsers pause for background tabs.)
+    let timer = null;
+    const schedule = () => {
+      showKnobValues();
+      $('k-status').textContent = 'Computing…';
+      clearTimeout(timer);
+      timer = setTimeout(render, 150);
+    };
+
+    try {
+      const target = await targetPicker($('targets'));
+      // Per-star starting range for the autocorrelation (data/targets.json): the oscillation hump.
+      if (target.acf) { $('acf-lo').value = target.acf[0]; $('acf-hi').value = target.acf[1]; }
+      native = await loadDataset(`../../data/${target.slug}/`);
+      normals = standardNormals(native.time.length);
+      segStart = longestSegment(native.time)[0];
+      showKnobValues();
+      render();
+      showPins([]);
+
+      ['k-days', 'k-cad', 'k-noise'].forEach(id => $(id).oninput = schedule);
+      $('k-reset').onclick = () => { $('k-days').value = DAYS.length - 1; $('k-cad').value = 0; $('k-noise').value = 0; schedule(); };
+
+      document.querySelectorAll('#axes button').forEach(b => b.onclick = () => {
+        document.querySelectorAll('#axes button').forEach(x => x.setAttribute('aria-pressed', x === b));
+        psdOpts.log = b.dataset.mode === 'loglog';
+        psd.setLog(psdOpts.log, psdOpts.log);
+      });
+      $('apply-smooth').onclick = () => { psdOpts.smoothing = parseFloat($('smooth').value) || 0; psd.setSmoothing(psdOpts.smoothing); };
+      $('smooth').onkeydown = e => { if (e.key === 'Enter') $('apply-smooth').click(); };
+      $('show-raw').onchange = e => { psdOpts.showRaw = e.target.checked; psd.setShowRaw(psdOpts.showRaw); };
+
+      $('acf-go').onclick = runAcf;
+      ['acf-lo', 'acf-hi', 'acf-lag'].forEach(id => $(id).onkeydown = e => { if (e.key === 'Enter') runAcf(); });
+      $('acf-view').onclick = () => {
+        const [a, b] = psd.viewRange();
+        $('acf-lo').value = a.toFixed(0); $('acf-hi').value = b.toFixed(0);
+        runAcf();
+      };
+    } catch (err) {
+      $('k-status').textContent = 'Could not load data: ' + err.message;
+      document.querySelectorAll('.loading').forEach(el => el.textContent = 'Could not load data: ' + err.message);
+      console.error(err);
+    }
+  </script>
+</body>
+</html>
