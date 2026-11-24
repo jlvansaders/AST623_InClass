@@ -36,7 +36,6 @@
 \setlength{\parskip}{0.4em}
 
 \title{\textbf{AST 623: Asteroseismology of Sun-like Stars}\\[0.3em]
-       \large In-class worksheet}
 \author{}
 \date{}
 
@@ -44,126 +43,67 @@
 \maketitle
 \vspace{-3em}
 
-\noindent Name: \underline{\hspace{6cm}} \hfill Target star: KIC \underline{\hspace{3cm}}
-
-\medskip
-Work through this worksheet alongside the interactive exercises on the course website
-(\url{https://TODO-github-pages-url/}). Pick your target star at the top of each exercise
-page and use the same star throughout. Write down units and uncertainties for everything
-you measure.
-
+Work through this worksheet alongside the interactive exercises on the website: 
+\url{https://TODO-github-pages-url/}. I have hand-picked a few of the better-observed, more obvious detections of pulsations. The goal here is to give you some more hands-on experience with asteroseismic techniques. You can choose among multiple target stars, and you should plan on examining more than one of them. 
 % =========================================================================
 \section*{Part 1: Examining the Power Spectrum}
 
 \needspace{12\baselineskip}\subsection*{The light curve}
-\onsite{Panel 1. Hover to read values; drag a box to zoom; \emph{Reset view} zooms back out.}
 
 \begin{enumerate}[series=ps]
   \item Zoom in until you can see individual one-minute points. What is the typical
-        point-to-point scatter, in ppm?
+        point-to-point scatter, in ppm? The Sun has oscillations with periods of a few minutes and amplitudes of a few ppm.
+        Can you see them by eye in data like this? Why or why not?
         \answer[2cm]
-  \item Solar-like oscillations have periods of a few minutes and amplitudes of a few ppm.
-        Can you see them by eye? Why or why not?
-        \answer
 \end{enumerate}
 
 \needspace{12\baselineskip}\subsection*{The power spectrum}
-\onsite{Panel 2. Use the axes toggle (log--log / linear) and the smoothing box. Clicking pins
-a frequency; the table under the plot reports the differences between pins
-(\emph{Large frequency separation} mode) or within pairs of pins
-(\emph{Small frequency separation} mode).}
 
 \begin{enumerate}[resume=ps]
   \item In log--log view, find the broad, slowly declining background and the hump of
         oscillation power on top of it. Roughly what frequency range does the hump span?
         \answer[2cm]
-  \item \textbf{\numax:} Smooth the spectrum with a width comparable to the mode spacing,
-        around \SI{100}{\micro\hertz} or so. Then hover over the peak of the smoothed curve
-        to estimate \numax.
-
-        \fillin{\numax}{\uHz}
+  \item \textbf{\numax:} Smooth the spectrum with a width comparable to the mode spacing, and estimate the frequency of maximum power, \numax. Also estimate a error on that measurement, and record it here. 
         \answer[1cm]
-  \item Switch to linear axes and zoom into the hump. Click on a peak to pin its frequency.
-        Pin a sequence of the tallest peaks. What spacing repeats?
+  \item Focus on the power from oscillations, and examine the frequencies present. What patterns do you see?
         \answer[2.5cm]
-  \item \textbf{\dnuzt:} Next to many strong peaks is a smaller peak just below it in
-        frequency. Switch the pin table to \emph{Small frequency separation}, then pin a
-        strong peak and its lower neighbour to measure the small separation. Do this for
-        several orders and average.
-
-        \fillin{\dnuzt}{\uHz}
+  \item \textbf{\dnuzt:} In this spectrum, you have a collection of $l=0$, $l=1$, and $l=2$ modes present. Look at the characteristic spacing between modes. You can use the "large frequency separation" button to look at the differences between marked frequencies, and the "small frequency separation" to look at the the differences between specific pairs of frequencies.  Record averages here. 
         \answer[1cm]
 \end{enumerate}
 
 \needspace{12\baselineskip}\subsection*{The autocorrelation of the power spectrum}
-\onsite{Panel 3. Set the frequency range and press \emph{Compute}. Click on the plot to pin
-lags; the table lists the differences.}
-
 \begin{enumerate}[resume=ps]
-  \item \textbf{\dnu:} Compute the autocorrelation over a frequency range centred on the
-        oscillation hump. Which lag gives the strongest peak? There is also a peak at about
-        half that lag. What causes it?
-
+  \item \textbf{\dnu:} Look at the autocorrelation function. Can you identify the characteristic spacings that you saw visually in the power spectrum? 
         \fillin{\dnu}{\uHz}
         \answer[2.5cm]
-  \item Now compute it over a range far from the hump (for example
-        \SIrange{5000}{8000}{\micro\hertz}). What changes, and why?
-        \answer
-  \item Compare your \dnu\ from the autocorrelation with the spacing you measured by
-        pinning peaks.
+  \item Focus only on portions of the oscillation spectrum. Do characteristic lags in the autocorrelation function depend on what part of the spectrum you are looking at? 
         \answer[2cm]
+  \item Estimate characteristic large (\dnu\) and small frequency seperations (\dnuzt), and their errors. Record them here. 
+       \answer[1cm]      
 \end{enumerate}
 
 \needspace{12\baselineskip}\subsection*{The \'echelle diagram}
-\onsite{Panel 4. Set \dnu\ with the slider or the box. \emph{Show two \dnu\ widths} repeats the
-diagram so ridges at the edges are not split. The $\varepsilon$ box shifts the horizontal axis
-to $(\nu - \varepsilon\dnu) \bmod \dnu$.}
 
 \begin{enumerate}[resume=ps]
-  \item Enter your \dnu\ from the autocorrelation. Then nudge it up and down with the
-        slider. How do the ridges tilt when \dnu\ is too small? Too large? Find the value
-        that makes the strongest ridge most nearly vertical.
-        \answer
-  \item Identify the ridges of $\ell = 0$, 1 and 2 modes. (Hint: $\ell = 0$ and $\ell = 2$
-        run close together; $\ell = 1$ sits roughly halfway between.) If a ridge is split
-        across the left and right edges, tick \emph{Show two \dnu\ widths}.
-        \answer
-  \item \textbf{\dnuzt:} Hover over the $\ell = 0$ and $\ell = 2$ ridges in the same row to
-        measure their horizontal separation. Does it change from the bottom of the diagram
-        to the top? How does it compare with your answer to question~6?
-        \answer
-  \item Are the ridges perfectly straight? What might cause them to curve?
-        \answer
+  \item Use the sliders to change the \dnu\ used to plot the  \'echelle diagram. What do you find as you approach the value of \dnu\ from the autocorrelation function?
+          \answer
+  \item Use the "mark l series" button on the power spectrum to mark modes and have them overplot on the  \'echelle diagram.  
+           \answer      
+  \item Let's actually identify the modes. Use the model diagrams here to identify the  $\ell = 0$, 1 and 2 modes based on their patterns in the power spectrum and the \'echelle diagram.
+          \answer
 \end{enumerate}
 
 \needspace{12\baselineskip}\subsection*{Mass, radius and age from scaling relations}
-\onsite{Panel 5. The star's \teff\ and \feh\ are filled in for you. Enter your seismic
-measurements with their uncertainties.}
 
 \begin{enumerate}[resume=ps]
   \item Enter your \numax, \dnu\ and \dnuzt\ with uncertainties. What mass, radius and age
-        do you get?
-
-        \begin{tabular}{@{}l@{\quad}l@{}}
-          $M$     & $=$ \underline{\hspace{3cm}} $\pm$ \underline{\hspace{2cm}} $M_\odot$ \\[0.6em]
-          $R$     & $=$ \underline{\hspace{3cm}} $\pm$ \underline{\hspace{2cm}} $R_\odot$ \\[0.6em]
-          $\tau$  & $=$ \underline{\hspace{3cm}} $\pm$ \underline{\hspace{2cm}} Gyr
-        \end{tabular}
-        \answer[0.5cm]
-  \item The age exponent on \dnu\ is about 9. If your \dnu\ were off by 1\%, how far off
-        would the age be? Try it.
-        \answer[2.5cm]
-  \item Which single input dominates the uncertainty on the age? What would you need to
-        measure better?
+        do you get? Take special care to think about precision measurements: how well do you think you can realistically measure the seismic values, and how does that affect the precision of your stellar parameter determinations?
         \answer
 \end{enumerate}
 
 % =========================================================================
 \newpage
 \section*{Part 2: Understanding Detectability}
-\onsite{The sliders at the top change the time span, the cadence and the added white noise.
-The power spectrum, light curve and autocorrelation are recomputed each time. Pins in the
-power spectrum and the autocorrelation stay put when you move the sliders.}
 
 \needspace{12\baselineskip}\subsection*{Time span and frequency resolution}
 \begin{enumerate}[series=det]

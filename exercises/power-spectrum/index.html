@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Examining the Power Spectrum</title>
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261123j">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261123k">
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -126,6 +126,16 @@
       <p class="eq-note">Bellinger keeps the same power-law form but lets the exponents float, and adds two more inputs: the small separation δν<sub>02</sub>, which is sensitive to the hydrogen left in the core (and so to age), and the metallicity. The exponents were fitted (by MCMC) to 80 Kepler main-sequence and early-subgiant stars whose masses, radii and ages had been found by fitting stellar models. Every relation has the form</p>
       <div class="eq" data-tex="\frac{Y}{Y_\odot} = \left(\frac{\nu_\mathrm{max}}{\nu_{\mathrm{max},\odot}}\right)^{\alpha}\left(\frac{\Delta\nu}{\Delta\nu_\odot}\right)^{\beta}\left(\frac{\delta\nu_{02}}{\delta\nu_{02,\odot}}\right)^{\gamma}\left(\frac{T_\mathrm{eff}}{T_{\mathrm{eff},\odot}}\right)^{\delta}\left(\frac{e^{[\mathrm{Fe/H}]}}{e^{[\mathrm{Fe/H}]_\odot}}\right)^{\varepsilon}"><code>\frac{Y}{Y_\odot} = \left(\frac{\nu_\mathrm{max}}{\nu_{\mathrm{max},\odot}}\right)^{\alpha}\left(\frac{\Delta\nu}{\Delta\nu_\odot}\right)^{\beta}\left(\frac{\delta\nu_{02}}{\delta\nu_{02,\odot}}\right)^{\gamma}\left(\frac{T_\mathrm{eff}}{T_{\mathrm{eff},\odot}}\right)^{\delta}\left(\frac{e^{[\mathrm{Fe/H}]}}{e^{[\mathrm{Fe/H}]_\odot}}\right)^{\varepsilon}</code></div>
       <p class="eq-note">where Y is the star's mass, radius or age (Y<sub>⊙</sub> = 1&nbsp;M<sub>⊙</sub>, 1&nbsp;R<sub>⊙</sub> or 4.569&nbsp;Gyr), and α, β, γ, δ and ε are exponents fitted separately for each of the three.</p>
+      <div class="sr-wrap">
+        <table class="sr-table sr-exp">
+          <thead><tr><th class="name">Y</th><th>α (ν<sub>max</sub>)</th><th>β (Δν)</th><th>γ (δν<sub>02</sub>)</th><th>δ (T<sub>eff</sub>)</th><th>ε ([Fe/H])</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Mass</td><td>0.975</td><td>−1.435</td><td>0</td><td>1.216</td><td>0.270</td></tr>
+            <tr><td class="name">Radius</td><td>0.305</td><td>−1.129</td><td>0</td><td>0.312</td><td>0.100</td></tr>
+            <tr><td class="name">Age</td><td>−6.556</td><td>9.059</td><td>−1.292</td><td>−4.245</td><td>−0.426</td></tr>
+          </tbody>
+        </table>
+      </div>
       <p class="eq-note">Solar reference values: ν<sub>max,⊙</sub> = 3090 ± 30 µHz, Δν<sub>⊙</sub> = 135.1 ± 0.1 µHz, δν<sub>02,⊙</sub> = 8.957 ± 0.059 µHz, T<sub>eff,⊙</sub> = 5772 ± 0.8 K, [Fe/H]<sub>⊙</sub> = 0. The relations were calibrated on stars with Δν between 38 and 180 µHz and δν<sub>02</sub> between 2.8 and 13 µHz. Outside that range (red giants especially) they are extrapolations.</p>
 
       <h3>Your star</h3>
@@ -153,7 +163,7 @@
 
   <script type="module">
     import { targetPicker, loadDataset, lightCurvePlot, powerSpectrumPlot, psdAutocorrelation, acfPlot,
-             echelleGrid, echellePlot } from '../../assets/js/asteroplot.js?v=20261123j';
+             echelleGrid, echellePlot } from '../../assets/js/asteroplot.js?v=20261123k';
 
     const $ = id => document.getElementById(id);
 

@@ -44,6 +44,8 @@ starting frequency range (µHz) for the Detectability autocorrelation and the
 |---|---|---|
 | KIC 10963065 | 6104 ± 74 | −0.2 ± 0.1 |
 | KIC 8006161 | 5488 ± 77 | +0.34 ± 0.1 |
+| KIC 9965715 | 5860 ± 180 | −0.44 ± 0.18 |
+| KIC 11081729 | 6548 ± 82 | +0.11 ± 0.10 |
 
 Each dataset is `meta.json` plus three little-endian float32 arrays: time (days),
 flux (ppm, high-pass filtered over `--flatten-days`), and the PSD (ppm²/µHz) on a
