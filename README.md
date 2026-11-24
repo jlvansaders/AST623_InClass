@@ -40,6 +40,14 @@ starting frequency range (µHz) for the Detectability autocorrelation and the
 échelle diagram; set them around the star's oscillation hump. The chosen star is kept in the page URL as
 `?star=<slug>`; with no `?star`, the first star in the list is shown.
 
+Each target in `targets.json` also carries `lum` (Gaia DR3 FLAME luminosity,
+[value, lower, upper] in L☉) and `gaia_dr3` (source id). These place the star on
+the HR diagram at the top of *Examining the Power Spectrum*; its T<sub>eff</sub>
+there is the spectroscopic value from `meta.json`. The grey background stars are
+in `data/hr_field.json`: a random sample of 4000 Kepler-field stars from Gaia DR3
+(within 7° of the field centre, G < 13, parallax/error > 20) with `teff_gspphot`
+and `lum_flame`. A star without `lum` is left off the diagram.
+
 | Star | T<sub>eff</sub> (K) | [Fe/H] (dex) |
 |---|---|---|
 | KIC 10963065 | 6104 ± 74 | −0.2 ± 0.1 |

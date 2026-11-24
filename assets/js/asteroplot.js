@@ -679,3 +679,67 @@ export async function targetPicker(container, dataRoot = '../../data/') {
   }));
   return chosen;
 }
+
+/* ---------- HR diagram of the targets ---------- */
+
+// Luminosity vs Teff for every star in data/targets.json, over a grey cloud of
+// Kepler-field stars (data/hr_field.json, Gaia DR3). The chosen target is filled
+// and labelled; clicking another target switches to it (like the picker buttons).
+// Target Teff (with its error) comes from each star's meta.json spectroscopy, so
+// it matches the scaling-relations panel; luminosity is Gaia DR3 FLAME.
+export async function hrDiagram(div, chosenSlug, dataRoot = '../../data/') {
+  const [targets, field] = await Promise.all([
+    fetchOk(dataRoot + 'targets.json').then(r => r.json()),
+    fetchOk(dataRoot + 'hr_field.json').then(r => r.json()),
+  ]);
+  const stars = (await Promise.all(targets.filter(t => t.lum).map(async t => {
+    const spec = await fetch(`${dataRoot}${t.slug}/meta.json`).then(r => r.json()).then(j => j.spectroscopy).catch(() => null);
+    return spec?.teff_K ? { ...t, teff: spec.teff_K[0], teffErr: spec.teff_K[1] } : null;
+  }))).filter(Boolean);
+  const others = stars.filter(s => s.slug !== chosenSlug);
+  const sel = stars.find(s => s.slug === chosenSlug);
+
+  const fieldTrace = () => ({
+    type: 'scattergl', mode: 'markers', x: field.teff_K, y: field.log_lum.map(v => 10 ** v),
+    marker: { size: 3, color: cssVar('--text-3'), opacity: 0.22 },
+    hoverinfo: 'skip', name: 'Kepler field',
+  });
+  const hover = '<b>%{text}</b><br>T<sub>eff</sub> %{x:.0f} K<br>L %{y:.2f} L☉<extra></extra>';
+  const otherTrace = () => ({
+    type: 'scatter', mode: 'markers', x: others.map(s => s.teff), y: others.map(s => s.lum[0]),
+    text: others.map(s => s.name), customdata: others.map(s => s.slug), hovertemplate: hover,
+    marker: { size: 9, color: cssVar('--surface'), line: { width: 2, color: cssVar('--series-1') } },
+    name: 'Other targets',
+  });
+  const selTrace = () => ({
+    type: 'scatter', mode: 'markers+text', x: sel ? [sel.teff] : [], y: sel ? [sel.lum[0]] : [],
+    text: sel ? [sel.name] : [], textposition: 'top center', customdata: sel ? [sel.slug] : [],
+    textfont: { color: cssVar('--text'), size: 12 }, hovertemplate: hover,
+    error_x: { type: 'data', array: sel ? [sel.teffErr] : [], color: cssVar('--series-2'), thickness: 1.5, width: 4 },
+    marker: { size: 13, color: cssVar('--series-2'), line: { width: 2, color: cssVar('--surface') } },
+    name: 'Selected target',
+  });
+
+  const layout = baseLayout();
+  layout.margin = { l: 52, r: 12, t: 8, b: 42 };
+  layout.font.size = 11;
+  layout.dragmode = false;
+  layout.hoverdistance = 24; // generous hit area: a click on or near a target selects it
+  layout.xaxis = { ...layout.xaxis, title: { ...layout.xaxis.title, text: 'T<sub>eff</sub> (K)' },
+                   range: [7100, 4600], showspikes: false, dtick: 500 };
+  layout.yaxis = { ...layout.yaxis, title: { ...layout.yaxis.title, text: 'L / L<sub>☉</sub>' },
+                   type: 'log', range: [Math.log10(0.25), Math.log10(40)], showspikes: false,
+                   tickvals: [0.3, 1, 3, 10, 30], ticktext: ['0.3', '1', '3', '10', '30'] };
+  if (div._fullLayout) Plotly.purge(div);
+  div.innerHTML = '';
+  await Plotly.newPlot(div, [fieldTrace(), otherTrace(), selTrace()], layout,
+                       { responsive: true, displayModeBar: false });
+  div.on('plotly_click', ev => {
+    const slug = ev.points?.[0]?.customdata;
+    if (!slug || slug === chosenSlug) return;
+    const url = new URL(location.href);
+    url.searchParams.set('star', slug);
+    location.href = url.toString();
+  });
+  registerTheme(div, () => Plotly.react(div, [fieldTrace(), otherTrace(), selTrace()], div.layout));
+}

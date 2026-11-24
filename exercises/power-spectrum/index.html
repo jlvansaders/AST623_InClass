@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Examining the Power Spectrum</title>
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261123k">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261124c">
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -18,13 +18,26 @@
   <main>
     <h1>Examining the Power Spectrum</h1>
 
-    <section class="picker" aria-label="Pick your target">
-      <h2>Pick your target</h2>
-      <div class="targets" id="targets"></div>
-    </section>
-    <p class="lede">Each target is a bright, Sun-like star that Kepler observed at one-minute cadence for months to years. Surface convection drives acoustic (p-mode) oscillations in these stars. You will find them, then measure their characteristic frequencies.</p>
+    <div class="intro">
+      <div class="intro-text">
+        <section class="picker" aria-label="Pick your target">
+          <h2>Pick your target</h2>
+          <div class="targets" id="targets"></div>
+        </section>
+        <p class="lede">Each target is a bright, Sun-like star that Kepler observed at one-minute cadence for months to years. Surface convection drives acoustic (p-mode) oscillations in these stars. You will find them, then measure their characteristic frequencies.</p>
 
-    <p class="muted">How to use the plots: <b>hover</b> to read values and <b>drag</b> a box to zoom. Use the <b>Zoom | Pan</b> toggle above each plot to switch between zooming and sliding the view, and <b>Reset view</b> (or double-click) to zoom back out. The data files are about 13&nbsp;MB, so give them a moment to load.</p>
+        <p class="muted">How to use the plots: <b>hover</b> to read values and <b>drag</b> a box to zoom. Use the <b>Zoom | Pan</b> toggle above each plot to switch between zooming and sliding the view, and <b>Reset view</b> (or double-click) to zoom back out. The data files are about 13&nbsp;MB, so give them a moment to load.</p>
+      </div>
+      <figure class="hr-fig">
+        <div id="hr" class="hr-plot"><div class="loading">Loading HR diagram…</div></div>
+        <figcaption>
+          <span class="key"><i class="sw sel"></i>Selected target</span>
+          <span class="key"><i class="sw oth"></i>Other targets (click to switch)</span>
+          <span class="key"><i class="sw fld"></i>Kepler-field stars</span>
+          <span class="src">T<sub>eff</sub> of targets: spectroscopy (as in panel 5). Luminosities and field-star T<sub>eff</sub>: Gaia DR3.</span>
+        </figcaption>
+      </figure>
+    </div>
 
     <div class="facts" id="facts"></div>
 
@@ -162,8 +175,8 @@
   </main>
 
   <script type="module">
-    import { targetPicker, loadDataset, lightCurvePlot, powerSpectrumPlot, psdAutocorrelation, acfPlot,
-             echelleGrid, echellePlot } from '../../assets/js/asteroplot.js?v=20261123k';
+    import { targetPicker, hrDiagram, loadDataset, lightCurvePlot, powerSpectrumPlot, psdAutocorrelation, acfPlot,
+             echelleGrid, echellePlot } from '../../assets/js/asteroplot.js?v=20261124c';
 
     const $ = id => document.getElementById(id);
 
@@ -238,6 +251,7 @@
 
     try {
       const target = await targetPicker($('targets'));
+      hrDiagram($('hr'), target.slug).catch(e => { $('hr').innerHTML = `<div class="loading">${e.message}</div>`; });
       // Per-star starting range for the échelle (data/targets.json), around the oscillation hump.
       if (target.echelle) { $('ech-lo').value = target.echelle[0]; $('ech-hi').value = target.echelle[1]; }
       // Pre-fill the star's spectroscopic Teff and [Fe/H] in the scaling panel. Read
